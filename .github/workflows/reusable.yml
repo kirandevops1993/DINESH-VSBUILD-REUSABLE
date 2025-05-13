@@ -1,0 +1,299 @@
+name: Test teamplate VSBuild Reusable Workflow
+ 
+on:
+
+  workflow_call:
+
+    inputs:
+
+      runsOn:
+
+        required: true
+
+        type: string
+
+        default: "windows-latest"
+
+      solution:
+
+        required: true
+
+        type: string
+
+        default: "*/*.sln"
+
+      vsVersion:
+
+        required: false
+
+        type: string
+
+        default: "latest"
+
+      msbuildArgs:
+
+        required: false
+
+        type: string
+
+        default: ""
+
+      platform:
+
+        required: true
+
+        type: string
+
+        default: "Any CPU"
+
+      configuration:
+
+        required: true
+
+        type: string
+
+        default: "Release"
+
+      clean:
+
+        required: false
+
+        type: boolean
+
+        default: false
+
+      maximumCpuCount:
+
+        required: false
+
+        type: boolean
+
+        default: false
+
+      restoreNugetPackages:
+
+        required: false
+
+        type: boolean
+
+        default: false
+
+      msbuildArchitecture:
+
+        required: false
+
+        type: string
+
+        default: "x86"
+
+      logProjectEvents:
+
+        required: false
+
+        type: boolean
+
+        default: false
+
+      createLogFile:
+
+        required: false
+
+        type: boolean
+
+        default: false
+
+      logFileVerbosity:
+
+        required: false
+
+        type: string
+
+        default: "normal"
+
+      enableDefaultLogger:
+
+        required: false
+
+        type: boolean
+
+        default: true
+
+      customVersion:
+
+        required: false
+
+        type: string
+
+        default: ""
+ 
+jobs:
+
+  VSBuild-Reuseable-Workflow:
+
+    runs-on: ${{ inputs.runsOn }}
+ 
+    steps:
+
+      - name: Checkout Repository
+
+        uses: actions/checkout@v4
+ 
+ 
+      - name: Setup Visual Studio
+
+        uses: microsoft/setup-msbuild@v1
+
+        with:
+
+          vs-version: ${{ inputs.vsVersion }}
+ 
+#------------------------------------------------------------------------------------------------------------------------------------------------
+
+#If you're not using the microsoft/setup-msbuild@v1 action, you need to ensure Visual Studio is already installed on the runner or set up manually in your workflow path,batchfile.
+
+      # - name: Setup Visual Studio
+
+      #   run: |
+
+      #     if ("${{ inputs.vsVersion }}" -eq "latest") {
+
+      #       Write-Host "Setting up Visual Studio with the latest version."
+
+      #       # Assuming 'latest' is already installed on the runner
+
+      #     } elseif ("${{ inputs.vsVersion }}" -eq "17.0") {
+
+      #       Write-Host "Setting up Visual Studio with version 17.0."
+
+      #       # Ensure Visual Studio 17.0 is installed and set the environment variables accordingly
+
+      #       & "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\Tools\VsDevCmd.bat"
+
+      #     } elseif ("${{ inputs.vsVersion }}" -eq "16.0") {
+
+      #       Write-Host "Setting up Visual Studio with version 16.0."
+
+      #       # Ensure Visual Studio 16.0 is installed and set the environment variables accordingly
+
+      #       & "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat"
+
+      #     } else {
+
+      #       Write-Host "Setting up Visual Studio with specified version: ${{ inputs.vsVersion }}"
+
+      #       # Add logic for other versions if needed
+
+      #     }
+
+      #   shell: pwsh
+
+#--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+      - name: Locate Solution File
+
+        id: find_sln
+
+        run: |
+
+          $solution = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -Filter "*.sln" | Select-Object -ExpandProperty FullName
+
+          if ($solution) {
+
+            Write-Output "SOLUTION_PATH=$solution" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+            echo "Solution file found: $solution"
+
+          } else {
+
+            echo "No solution file found!"
+
+            exit 1
+
+          }
+
+        shell: pwsh
+ 
+      - name: Restore NuGet Packages
+
+        if: ${{ inputs. restoreNugetPackages }}
+
+        run: nuget restore "%SOLUTION_PATH%"
+
+        shell: cmd
+ 
+      - name: Check PowerShell Version
+
+        run: |
+
+          $PSVersionTable.PSVersion
+
+        shell: pwsh
+
+      - name: Build Solution with MSBuild
+
+        run: |
+
+          #$global:am_debug = $true
+
+          echo "solution file"
+
+          Write-Host $env:SOLUTION_PATH 
+
+          $vsbuildCmd = "msbuild `"$env:SOLUTION_PATH`" /p:Platform=`"${{ inputs.platform }}`" /p:Configuration=`"${{ inputs.configuration }}`""
+
+          # Check if msbuildArgs is provided and append it to the command
+
+          if (![string]::IsNullOrEmpty("${{ inputs.msbuildArgs }}")) {
+
+            $vsbuildCmd += " ${{ inputs.msbuildArgs }}"
+
+          }
+
+          if ("$"+"${{ inputs.clean }}") {
+
+            $vsbuildCmd += " /t:Clean,Build"
+
+          }
+
+          if ("$"+"${{ inputs.maximumCpuCount }}") {
+
+            $vsbuildCmd += " /m"
+
+          }
+
+          if ("${{ inputs.msbuildArchitecture }}" -eq "x64") {
+
+            $vsbuildCmd += " /p:PlatformToolset=x64"
+
+          }
+
+          if ("$"+"${{ inputs.createLogFile }}") {
+
+            $logFile = "$env:GITHUB_WORKSPACE/build.log"
+
+              $vsbuildCmd += " /fl /flp:`"logfile=$logFile;verbosity=${{ inputs.logFileVerbosity }}`""
+
+            #$vsbuildCmd += " /fl /flp:logfile=`"$logFile`";verbosity=${{ inputs.logFileVerbosity }}"
+
+          }
+ 
+      
+
+          if ("$"+"${{ inputs.enableDefaultLogger }}") {
+
+            $vsbuildCmd += " /logger:Microsoft.VisualStudio.TraceLogger,Microsoft.Build.Logging"
+
+          }
+
+          if ("$"+"${{ inputs.logProjectEvents }}") {
+
+            $vsbuildCmd += " /clp:PerformanceSummary;ErrorsOnly;WarningsOnly"
+
+          }
+
+          Write-Host "Executing: $vsbuildCmd"
+
+          Invoke-Expression $vsbuildCmd
+
+        shell: pwsh
+ 
