@@ -3,10 +3,7 @@ name:  template VSBuild Reusable Workflow 71a9a2d3-a98a-4caa-96ab-affca411ecda
 on:
   workflow_call:
     inputs:
-      runsOn:
-        required: true
-        type: string
-        default: "windows-latest"
+      runsOn: "windows-latest"
       solution:
         required: true
         type: string
