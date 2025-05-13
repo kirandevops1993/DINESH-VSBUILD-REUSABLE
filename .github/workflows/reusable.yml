@@ -1,4 +1,6 @@
-name: Test teamplate VSBuild Reusable Workflow
+VSBUILD SUCCESS WORKFLOW :
+ 
+name:  template VSBuild Reusable Workflow 71a9a2d3-a98a-4caa-96ab-affca411ecda
  
 on:
 
@@ -138,7 +140,6 @@ jobs:
 
         uses: actions/checkout@v4
  
- 
       - name: Setup Visual Studio
 
         uses: microsoft/setup-msbuild@v1
@@ -220,80 +221,21 @@ jobs:
         run: nuget restore "%SOLUTION_PATH%"
 
         shell: cmd
- 
-      - name: Check PowerShell Version
-
-        run: |
-
-          $PSVersionTable.PSVersion
-
-        shell: pwsh
 
       - name: Build Solution with MSBuild
 
         run: |
 
-          #$global:am_debug = $true
-
           echo "solution file"
 
-          Write-Host $env:SOLUTION_PATH 
-
-          $vsbuildCmd = "msbuild `"$env:SOLUTION_PATH`" /p:Platform=`"${{ inputs.platform }}`" /p:Configuration=`"${{ inputs.configuration }}`""
-
-          # Check if msbuildArgs is provided and append it to the command
-
-          if (![string]::IsNullOrEmpty("${{ inputs.msbuildArgs }}")) {
-
-            $vsbuildCmd += " ${{ inputs.msbuildArgs }}"
-
-          }
-
-          if ("$"+"${{ inputs.clean }}") {
-
-            $vsbuildCmd += " /t:Clean,Build"
-
-          }
-
-          if ("$"+"${{ inputs.maximumCpuCount }}") {
-
-            $vsbuildCmd += " /m"
-
-          }
-
-          if ("${{ inputs.msbuildArchitecture }}" -eq "x64") {
-
-            $vsbuildCmd += " /p:PlatformToolset=x64"
-
-          }
-
-          if ("$"+"${{ inputs.createLogFile }}") {
-
-            $logFile = "$env:GITHUB_WORKSPACE/build.log"
-
-              $vsbuildCmd += " /fl /flp:`"logfile=$logFile;verbosity=${{ inputs.logFileVerbosity }}`""
-
-            #$vsbuildCmd += " /fl /flp:logfile=`"$logFile`";verbosity=${{ inputs.logFileVerbosity }}"
-
-          }
+          Write-Host $env:SOLUTION_PATH
  
-      
-
-          if ("$"+"${{ inputs.enableDefaultLogger }}") {
-
-            $vsbuildCmd += " /logger:Microsoft.VisualStudio.TraceLogger,Microsoft.Build.Logging"
-
-          }
-
-          if ("$"+"${{ inputs.logProjectEvents }}") {
-
-            $vsbuildCmd += " /clp:PerformanceSummary;ErrorsOnly;WarningsOnly"
-
-          }
+          $vsbuildCmd = "msbuild `"$env:SOLUTION_PATH`" /p:Platform=`"${{ inputs.platform }}`" /p:Configuration=`"${{ inputs.configuration }}`""
 
           Write-Host "Executing: $vsbuildCmd"
 
           Invoke-Expression $vsbuildCmd
 
         shell: pwsh
+
  
