@@ -237,5 +237,3 @@ jobs:
           Invoke-Expression $vsbuildCmd
 
         shell: pwsh
-
- 
